@@ -48,7 +48,6 @@ export function Lighting() {
       sun.current.position.set(CENTER.x + s.sunDir[0] * 60, s.sunDir[1] * 60, CENTER.z + s.sunDir[2] * 60)
       sun.current.color.set(s.sunColor)
       sun.current.intensity = s.sunIntensity
-      sun.current.castShadow = s.sunIntensity > 0.05
     }
     if (moon.current) moon.current.intensity = s.moonIntensity
     if (hemi.current) {
@@ -69,9 +68,8 @@ export function Lighting() {
       if (!l) return
       const target = r.when(occ, anyone) ? r.max * (0.15 + 0.85 * s.night) : 0
       l.intensity = l.intensity + (target - l.intensity) * k
-      l.visible = l.intensity > 0.02
     })
-    lamps.current.forEach(l => { if (l) { l.intensity = 14 * s.night; l.visible = s.night > 0.05 } })
+    lamps.current.forEach(l => { if (l) l.intensity = 14 * s.night })
 
     // emissive props
     const d = getDyn()

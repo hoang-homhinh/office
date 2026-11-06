@@ -141,7 +141,7 @@ function traffic(t: number): number {
   return 0.35
 }
 
-function Traffic() {
+export function Traffic() {
   const cars = useMemo<Car[]>(() => Array.from({ length: 10 }, (_, i) => ({
     x: -30 + i * 9, dir: i % 2 ? 1 : -1, lane: i % 2 ? 27.0 : 28.5, v: 6 + (i % 3) * 2,
     kind: i % 3 === 0 ? 'car' : 'bike', color: CAR_COLORS[i % CAR_COLORS.length], on: i % 2 === 0, wait: i * 0.4,
@@ -205,6 +205,7 @@ function Traffic() {
   )
 }
 
+/** Static outdoor scenery (safe to merge). Traffic is exported separately because it moves. */
 export function Outdoors() {
   return (
     <group>
@@ -212,7 +213,6 @@ export function Outdoors() {
       <Fence />
       <Trees />
       <Lamps />
-      <Traffic />
     </group>
   )
 }

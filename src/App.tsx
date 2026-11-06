@@ -19,6 +19,7 @@ declare global {
       view: (v: ViewId) => void
       tab: (t: 'office' | 'timeline') => void
       readonly fps: number
+      readonly perf: { fps: number; calls: number; programs: number }
       readonly t: number
     }
   }
@@ -73,6 +74,7 @@ export default function App() {
       view: v => st().setView(v),
       tab: t => st().setTab(t),
       get fps() { return perf.fps },
+      get perf() { return { ...perf } },
       get t() { return source.world.t },
     }
   }, [])

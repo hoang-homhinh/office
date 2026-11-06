@@ -1,4 +1,5 @@
 import { CameraControls } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import type CameraControlsImpl from 'camera-controls'
 import { source } from '../data/mockSource'
@@ -45,12 +46,15 @@ export function CameraRig() {
   const nonce = useOffice(s => s.camNonce)
   const selected = useOffice(s => s.selected)
   const first = useRef(true)
+  const size = useThree(s => s.size)
 
   useEffect(() => {
     const c = ref.current
     if (!c) return
     camApi.controls = c
-    let v: ViewDef = VIEWS[view]
+    // views are framed for a wide stage; back off on tall/narrow screens
+    const fit = Math.min(2.4, Math.max(1, 1.75 / (size.width / Math.max(1, size.height))))
+    let v: ViewDef = { ...VIEWS[view], dist: VIEWS[view].dist * fit }
     if (selected !== null && !first.current) {
       const p = source.world.people[selected]
       if (source.world.isPresent(p)) v = { target: [p.pos.x, 0.7, p.pos.z], dist: 9 }
