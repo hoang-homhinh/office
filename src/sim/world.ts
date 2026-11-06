@@ -43,31 +43,45 @@ const headingOf = (face: number) => (face === 1 ? 0 : Math.PI)
 export class World {
   readonly seed: number
   readonly team = TEAM
-  t = START_T
-  day = 1
-  people: PersonState[]
-  events: GitEvent[] = []
-  wf: Workflow
-  private rng: Rng
-  private plans: DayPlan[]
-  private evAcc = 0
-  private today = { merged: 0, deploys: 0, ciFails: 0, qaPass: 0, qaFail: 0, commits: 0 }
-  private lastDeployAt: number | null = null
-  private lastPipelineAt = -999
-  private lastCiFailAt = -999
-  private burn: number[]
+  t!: number
+  day!: number
+  people!: PersonState[]
+  events!: GitEvent[]
+  wf!: Workflow
+  private rng!: Rng
+  private plans!: DayPlan[]
+  private evAcc!: number
+  private today!: { merged: number; deploys: number; ciFails: number; qaPass: number; qaFail: number; commits: number }
+  private lastDeployAt!: number | null
+  private lastPipelineAt!: number
+  private lastCiFailAt!: number
+  private burn!: number[]
   /** bumps whenever events change, so UIs can memoise */
   version = 0
 
   constructor(seed = 20261106) {
     this.seed = seed
-    this.rng = new Rng(seed)
+    this.init()
+  }
+
+  /** (Re)initialises the deterministic state for this seed: day 1, 07:35. */
+  private init(): void {
+    this.t = START_T
+    this.day = 1
+    this.events = []
+    this.evAcc = 0
+    this.today = { merged: 0, deploys: 0, ciFails: 0, qaPass: 0, qaFail: 0, commits: 0 }
+    this.lastDeployAt = null
+    this.lastPipelineAt = -999
+    this.lastCiFailAt = -999
+    this.rng = new Rng(this.seed)
     this.plans = genDay(this.rng, TEAM)
-    this.wf = new Workflow(TEAM, new Rng(seed ^ 0x9e3779b9), START_T)
-    this.burn = [26, 25, 23, 22, 21, 19, 17].slice(0, 6)
+    this.wf = new Workflow(TEAM, new Rng(this.seed ^ 0x9e3779b9), START_T)
+    this.burn = [26, 25, 23, 22, 21, 19]
     this.people = TEAM.map((cfg, idx) => ({
       idx, cfg, pos: { x: 0, z: 0 }, heading: 0, place: 'home', dest: 'home', path: [], act: 'home', bikeOn: false, leaving: false,
     }))
+    this.version++
   }
 
   plansFor(i: number): DayPlan {
@@ -188,10 +202,25 @@ export class World {
     p.heading = headingOf(placeSpot(p.idx, p.place, this.plans[p.idx]).face)
   }
 
-  /** Jump the clock; everyone appears where their schedule says, without walking. */
+  /**
+   * Jump the clock; everyone appears where their schedule says, without walking.
+   * Jumping forward within the same day fast-forwards the work so events and stats stay realistic.
+   */
   setTime(t: number): void {
-    this.t = ((t % DAY_MIN) + DAY_MIN) % DAY_MIN
-    this.evAcc = 0
+    const target = ((t % DAY_MIN) + DAY_MIN) % DAY_MIN
+    const day = this.day
+    // going back in time: replay deterministically from the seed (cheap: ~360 steps per day)
+    if (target < this.t) this.init()
+    while (this.day < day || this.t < target - 1e-6) {
+      const end = this.day < day ? DAY_MIN : target
+      this.stepTime(Math.min(SCHEDULE.eventEveryMin, end - this.t))
+      this.snapPeople()
+    }
+    this.t = target
+    this.snapPeople()
+  }
+
+  private snapPeople(): void {
     for (const p of this.people) {
       const w = want(this.plans[p.idx], this.t)
       p.path = []

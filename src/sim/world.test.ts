@@ -36,6 +36,37 @@ describe('World', () => {
     })
   })
 
+  it('jumping forward within a day fast-forwards the work so events exist', () => {
+    const w = new World(12)
+    w.setTime(630)
+    expect(w.t).toBeCloseTo(630)
+    expect(w.events.length).toBeGreaterThan(5)
+    expect(w.events.every(e => e.at <= 630)).toBe(true)
+    expect(w.stats().today.commits).toBeGreaterThan(0)
+  })
+
+  it('jumping backward rewinds: no events from the future, same state as jumping there directly', () => {
+    const w = new World(13)
+    w.setTime(1260)
+    w.setTime(630)
+    const direct = new World(13)
+    direct.setTime(630)
+    expect(w.events.every(e => e.at <= 630)).toBe(true)
+    expect(w.events.length).toBe(direct.events.length)
+    expect(w.stats().today).toEqual(direct.stats().today)
+    expect(w.stats().sprint.done).toBe(direct.stats().sprint.done)
+  })
+
+  it('jumping backward on day 2 stays on day 2', () => {
+    const w = new World(14)
+    w.setTime(1430)
+    while (w.day === 1) w.advance(0.05, 30)
+    w.setTime(600)
+    w.setTime(300)
+    expect(w.day).toBe(2)
+    expect(w.t).toBeCloseTo(300)
+  })
+
   it('setTime(03:00) sends everyone home and hides bikes', () => {
     const w = new World(4)
     w.setTime(600)
